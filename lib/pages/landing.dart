@@ -33,19 +33,20 @@ class LandingPageState extends State<LandingPage>
         top: true,
         child: Scaffold(
           appBar: AppBar(
+            elevation: 1,
             flexibleSpace: new TabBar(
               controller: _tabController,
               tabs: [
                 Tab(icon: Icon(Icons.account_box)),
                 Tab(icon: Icon(Icons.map)),
-                Tab(icon: Icon(Icons.group)),
+                Tab(icon: Icon(Icons.contacts)),
               ],
             ),
           ),
           body: TabBarView(
             controller: _tabController,
             children: [
-              UserProfilePrivate(),
+              UserProfilePrivatePage(),
               ExplorePage(),
               MatchesPage(),
             ],

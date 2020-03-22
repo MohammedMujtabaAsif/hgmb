@@ -1,4 +1,5 @@
 class User {
+  int id;
   String firstNames;
   String surname;
   String prefName;
@@ -17,6 +18,7 @@ class User {
   // String linkToPhoto;
 
   User({
+    this.id,
     this.firstNames,
     this.surname,
     this.prefName,
@@ -37,6 +39,7 @@ class User {
     return User(
       // firstNames: json["firstNames"],
       // surname: json["surname"],
+      id: json['id'],
       prefName: json["prefName"],
       // email: json["email"],
       // phoneNumber: json['phoneNumber'],

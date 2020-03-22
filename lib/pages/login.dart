@@ -14,14 +14,13 @@ class _LoginPageState extends State<LoginPage> {
   var email;
   var password;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+
   _showMsg(msg) {
     final snackBar = SnackBar(
       content: Text(msg),
       action: SnackBarAction(
         label: 'Close',
-        onPressed: () {
-          //TODO: Some code to undo the change!
-        },
+        onPressed: () {},
       ),
     );
     _scaffoldKey.currentState.showSnackBar(snackBar);
@@ -175,7 +174,8 @@ class _LoginPageState extends State<LoginPage> {
       SharedPreferences localStorage = await SharedPreferences.getInstance();
       localStorage.setString('token', json.encode(body['token']));
       localStorage.setString('user', json.encode(body['user']));
-      Navigator.of(context).pushReplacementNamed('/landing');
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/landing', (Route<dynamic> route) => false);
     } else {
       _showMsg(body['message']);
     }
