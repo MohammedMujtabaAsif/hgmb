@@ -1,18 +1,13 @@
-//Pages
 import 'package:flutter/material.dart';
+
+//Pages
 import 'package:hgmb/pages/login.dart';
-import 'package:hgmb/pages/register.dart';
 import 'package:hgmb/pages/landing.dart';
-import 'package:hgmb/pages/userProfilePublic.dart';
-import 'package:hgmb/pages/call.dart';
 
 //Services
 import 'package:flutter/services.dart';
+import 'package:hgmb/utils/routeGenerator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// import 'package:hgmb/pages/explore.dart';
-// import 'package:hgmb/pages/matches.dart';
-// import 'package:hgmb/pages/user';
 
 // void main() => runApp(new MaterialApp(home: new LandingPage()));
 
@@ -23,17 +18,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     return MaterialApp(
-        title: 'HGMB',
-        debugShowCheckedModeBanner: false,
-        home: CheckAuth(),
-        routes: <String, WidgetBuilder>{
-          '/login': (BuildContext context) => new LoginPage(),
-          '/register': (BuildContext context) => new RegisterPage(),
-          '/landing': (BuildContext context) => new LandingPage(),
-          '/userProfilePublic': (BuildContext context) =>
-              new UserProfilePublic(),
-          '/call': (BuildContext context) => new CallPage(),
-        });
+      title: 'HGMB',
+      debugShowCheckedModeBanner: false,
+      onGenerateRoute: RouteGenerator.generateRoute,
+      home: CheckAuth(),
+    );
   }
 }
 
