@@ -22,6 +22,7 @@ class RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _isPassword = true;
   final _formKey = GlobalKey<FormState>();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   User user = User();
 
@@ -53,6 +54,7 @@ class RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     final _mediaWidth = MediaQuery.of(context).size.width;
     return new Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
           title: Text("Sign Up"),
         ),
@@ -254,6 +256,17 @@ class RegisterPageState extends State<RegisterPage> {
                 ]))));
   }
 
+  _showMsg(msg) {
+    final snackBar = SnackBar(
+      content: Text(msg),
+      action: SnackBarAction(
+        label: 'Close',
+        onPressed: () {},
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
+  }
+
   void _register() async {
     setState(() {
       _isLoading = true;
@@ -272,15 +285,18 @@ class RegisterPageState extends State<RegisterPage> {
 
     var res = await DatabaseHelper().authData(data, '/signup');
     var body = json.decode(res.body);
-    print(body);
+    // print(body);
     if (body['success']) {
       SharedPreferences localStorage = await SharedPreferences.getInstance();
       localStorage.setString('token', json.encode(body['token']));
       localStorage.setString('user', json.encode(body['user']));
-      Navigator.pushReplacementNamed(context, '/landing');
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/landing', (Route<dynamic> route) => false);
     } else {
-      //TODO: ADD ERROR MESSAGE FOR TAKEN FIELDS LIKE EMAIL
-      print(body['message']);
+      Map<String, dynamic> _errors = Map<String, dynamic>.from(body['message']);
+      StringBuffer sb = new StringBuffer();
+      sb.writeAll(_errors.values, "\n");
+      _showMsg(sb.toString());
     }
 
     setState(() {
