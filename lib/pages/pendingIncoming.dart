@@ -7,36 +7,49 @@ import 'package:hgmb/utils/refreshWithMessage.dart';
 import 'package:hgmb/utils/userListBox.dart';
 import 'package:hgmb/utils/userProfile.dart';
 
-class MatchedPage extends StatefulWidget {
+class PendingIncomingPage extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
-  const MatchedPage({this.scaffoldKey});
-  State createState() => _MatchedPageState();
+  const PendingIncomingPage({
+    this.scaffoldKey,
+    Key key,
+  }) : super(key: key);
+  State createState() => _PendingIncomingPageState();
 }
 
-class _MatchedPageState extends State<MatchedPage> {
-  StreamController<List<User>> _users;
+class _PendingIncomingPageState extends State<PendingIncomingPage> {
+  StreamController<List<User>> _users = new StreamController<List<User>>();
   ScrollController _sc = new ScrollController();
   List<User> users = new List<User>();
   var db = new DatabaseHelper();
-  int _pageNum;
+
+  // int _pageNum;
   bool _messageExists = false;
   bool _isLoading = false;
   String _messageData = "";
-  Timer timer;
+
+  _showMsg(msg) {
+    final snackBar = SnackBar(
+      content: Text(msg),
+      action: SnackBarAction(
+        label: 'Close',
+        onPressed: () {},
+      ),
+    );
+    widget.scaffoldKey.currentState.showSnackBar(snackBar);
+  }
 
   @override
   void initState() {
     super.initState();
-    if (this.mounted) {
-      _pageNum = 1;
-      _users = StreamController<List<User>>();
-      _getUsers();
-      _sc.addListener(() {
-        if (_sc.position.pixels == _sc.position.maxScrollExtent) {
-          _getUsers();
-        }
-      });
-    }
+    // _pageNum = 1;
+    _users = StreamController<List<User>>();
+    _getUsers();
+
+    _sc.addListener(() {
+      if (_sc.position.pixels == _sc.position.maxScrollExtent) {
+        _getUsers();
+      }
+    });
   }
 
   _getUsers() async {
@@ -46,7 +59,9 @@ class _MatchedPageState extends State<MatchedPage> {
       });
     }
 
-    var res = await db.getData('acceptedRequests/?page=' + _pageNum.toString());
+    await new Future.delayed(const Duration(seconds: 1));
+
+    var res = await db.getData('incomingRequests');
     var body = json.decode(res.body);
 
     if (!body['success']) {
@@ -66,10 +81,7 @@ class _MatchedPageState extends State<MatchedPage> {
       }
     } else {
       _messageExists = false;
-      if (body['data']['next_page_url'] != null) {
-        _pageNum++;
-      }
-      users += await db.getUsersAsList(body['data']['data']);
+      users += await db.getUsersAsList(body['data']);
 
       final tempUserList = users.map((e) => e.id).toSet();
       users.retainWhere((x) => tempUserList.remove(x.id));
@@ -77,31 +89,13 @@ class _MatchedPageState extends State<MatchedPage> {
     if (this.mounted) {
       setState(
         () {
+          _isLoading = false;
           if ((users).isNotEmpty) {
             _users.add(users);
           }
-          _isLoading = false;
         },
       );
     }
-  }
-
-  _unmatch(data) async {
-    var res = await db.postData({'id': data}, 'unfriend');
-    var body = json.decode(res.body);
-    _messageExists = false;
-    _showMsg(body['message']);
-  }
-
-  _showMsg(msg) {
-    final snackBar = SnackBar(
-      content: Text(msg),
-      action: SnackBarAction(
-        label: 'Close',
-        onPressed: () {},
-      ),
-    );
-    widget.scaffoldKey.currentState.showSnackBar(snackBar);
   }
 
   @override
@@ -111,6 +105,19 @@ class _MatchedPageState extends State<MatchedPage> {
     _users.close();
   }
 
+  _acceptMatchRequest(data) async {
+    var res = await db.postData({'id': data}, 'acceptFriendRequest');
+    var body = json.decode(res.body);
+    _showMsg(body['message']);
+  }
+
+  _denyMatchRequest(data) async {
+    var res = await db.postData({'id': data}, 'denyFriendRequest');
+    var body = json.decode(res.body);
+    _showMsg(body['message']);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: _users.stream,
@@ -150,47 +157,43 @@ class _MatchedPageState extends State<MatchedPage> {
                             padding: EdgeInsets.fromLTRB(5.0, 10.0, 5.0, 0.0),
                             child: new UserListBox(
                               u: snapshot.data[index],
-                              buttonName: "Unmatch",
+                              buttonName: "Decision",
                               buttonMethod: () {
                                 // set up the buttons
-                                Widget continueButton = FlatButton(
+                                Widget acceptButton = FlatButton(
                                   child: Text(
-                                    "Unmatch",
+                                    "Accept",
+                                  ),
+                                  onPressed: () {
+                                    _acceptMatchRequest(
+                                        snapshot.data[index].id);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                                Widget denyButton = FlatButton(
+                                  child: Text(
+                                    "Deny",
                                     style: TextStyle(color: Colors.red),
                                   ),
                                   onPressed: () {
-                                    _unmatch(snapshot.data[index].id);
-
-                                    Navigator.of(context).pop();
-                                  },
-                                );
-                                Widget cancelButton = FlatButton(
-                                  child: Text(
-                                    "Cancel",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
+                                    _denyMatchRequest(snapshot.data[index].id);
+                                    Navigator.pop(context);
                                   },
                                 );
 
                                 // set up the AlertDialog
                                 AlertDialog alert = AlertDialog(
-                                  title: Text(
-                                    "Unmatch " + snapshot.data[index].prefName,
-                                    style: TextStyle(fontSize: 18),
-                                  ),
+                                  title: Text("Match Request"),
                                   content: Text(
-                                    "Are you sure you want to unmatch with " +
-                                        snapshot.data[index].prefName +
-                                        "?",
-                                    style: TextStyle(fontSize: 14),
-                                  ),
+                                      "Would you like to match with " +
+                                          snapshot.data[index].prefName +
+                                          "?"),
                                   actions: [
-                                    cancelButton,
-                                    continueButton,
+                                    denyButton,
+                                    acceptButton,
                                   ],
                                 );
+
                                 // show the dialog
                                 showDialog(
                                   context: context,
@@ -198,11 +201,11 @@ class _MatchedPageState extends State<MatchedPage> {
                                     return alert;
                                   },
                                 ).then((value) {
-                                  if (this.mounted) {
-                                    setState(() {
-                                      _getUsers();
-                                    });
-                                  }
+                                  setState(() {
+                                    users = [];
+                                    // _pageNum = 1;
+                                    _getUsers();
+                                  });
                                 });
                               },
                             ),
@@ -214,7 +217,7 @@ class _MatchedPageState extends State<MatchedPage> {
                   onRefresh: () async {
                     setState(() {
                       users = [];
-                      _pageNum = 1;
+                      // _pageNum = 1;
                       _getUsers();
                     });
                   },
@@ -228,7 +231,7 @@ class _MatchedPageState extends State<MatchedPage> {
             onRefresh: () async {
               setState(() {
                 users = [];
-                _pageNum = 1;
+                // _pageNum = 1;
                 _getUsers();
               });
             },

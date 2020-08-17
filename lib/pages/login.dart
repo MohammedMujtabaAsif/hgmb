@@ -1,30 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hgmb/utils/databaseHelper.dart';
+import 'package:hgmb/utils/formFields.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  bool _isLoading = false;
-  final _formKey = GlobalKey<FormState>();
-  var email;
-  var password;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  _showMsg(msg) {
-    final snackBar = SnackBar(
-      content: Text(msg),
-      action: SnackBarAction(
-        label: 'Close',
-        onPressed: () {},
-      ),
-    );
-    _scaffoldKey.currentState.showSnackBar(snackBar);
-  }
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  bool _isPassword = true;
+  String email;
+  String password;
 
   @override
   Widget build(BuildContext context) {
@@ -54,20 +45,15 @@ class _LoginPageState extends State<LoginPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
-                              TextFormField(
-                                style: TextStyle(color: Color(0xFF000000)),
-                                cursorColor: Color(0xFF9b9b9b),
-                                keyboardType: TextInputType.text,
-                                decoration: InputDecoration(
-                                  prefixIcon: Icon(
+                              MyTextFormField(
+                                isEmail: true,
+                                hintText: "Email",
+                                suffixIcon: IconButton(
+                                  icon: Icon(
                                     Icons.email,
                                     color: Colors.grey,
                                   ),
-                                  hintText: "Email",
-                                  hintStyle: TextStyle(
-                                      color: Color(0xFF9b9b9b),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal),
+                                  onPressed: null,
                                 ),
                                 validator: (emailValue) {
                                   if (emailValue.isEmpty) {
@@ -77,22 +63,17 @@ class _LoginPageState extends State<LoginPage> {
                                   return null;
                                 },
                               ),
-                              TextFormField(
-                                style: TextStyle(color: Color(0xFF000000)),
-                                cursorColor: Color(0xFF9b9b9b),
-                                keyboardType: TextInputType.text,
-                                obscureText: true,
-                                decoration: InputDecoration(
-                                  prefixIcon: Icon(
-                                    Icons.vpn_key,
-                                    color: Colors.grey,
-                                  ),
-                                  hintText: "Password",
-                                  hintStyle: TextStyle(
-                                      color: Color(0xFF9b9b9b),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal),
-                                ),
+                              MyTextFormField(
+                                isPassword: _isPassword,
+                                hintText: "Password",
+                                suffixIcon: _isPassword
+                                    ? IconButton(
+                                        onPressed: () => toggle("_isPassword"),
+                                        icon: Icon(Icons.visibility_off))
+                                    : IconButton(
+                                        onPressed: () => toggle("_isPassword"),
+                                        icon: Icon(Icons.visibility),
+                                      ),
                                 validator: (passwordValue) {
                                   if (passwordValue.isEmpty) {
                                     return 'Please enter some text';
@@ -102,9 +83,27 @@ class _LoginPageState extends State<LoginPage> {
                                 },
                               ),
                               Padding(
+                                padding: const EdgeInsets.only(top: 0),
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                        context, '/resetPassword');
+                                  },
+                                  child: Text(
+                                    'Reset Password',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 12.0,
+                                      decoration: TextDecoration.none,
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
                                 padding: const EdgeInsets.all(10.0),
                                 child: FlatButton(
-                                  child: Padding(
+                                  child: Container(
                                     padding: EdgeInsets.only(
                                         top: 8, bottom: 8, left: 10, right: 10),
                                     child: Text(
@@ -142,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.pushNamed(context, '/register');
                         },
                         child: Text(
-                          'Create new Account',
+                          'Create New Account',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 15.0,
@@ -162,26 +161,67 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  // Attempt to login
   void _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // check the page is loaded and set the button to the loading state
+    if (this.mounted) {
+      toggle("_isLoading");
+    }
+    // format the data as expected by server
     var data = {'email': email, 'password': password};
 
-    var res = await DatabaseHelper().authData(data, '/login');
+    // POST data to login route
+    var res = await DatabaseHelper().authData(data, 'login');
+    // Decode the response from the server
     var body = json.decode(res.body);
+
+    // If the success is true save the token and user, then move the user to the middleware page
     if (body['success']) {
       SharedPreferences localStorage = await SharedPreferences.getInstance();
       localStorage.setString('token', json.encode(body['token']));
       localStorage.setString('user', json.encode(body['user']));
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/landing', (Route<dynamic> route) => false);
-    } else {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/middleware',
+        (Route<dynamic> route) => false,
+      );
+    }
+    // if the success is false, show the message in the snackbar
+    else {
       _showMsg(body['message']);
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    // set the button to non-loading state
+    if (this.mounted) {
+      toggle("_isLoading");
+    }
+  }
+
+  // show message in the scaffold's snackback
+  _showMsg(msg) {
+    final snackBar = SnackBar(
+      content: Text(msg),
+      action: SnackBarAction(
+        label: 'Close',
+        onPressed: () {},
+      ),
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
+  }
+
+  void toggle(boolVal) {
+    //toggle all the potential booleans
+    setState(
+      () {
+        switch (boolVal) {
+          case "_isLoading":
+            _isLoading ^= true;
+            break;
+          case "_isPassword":
+            _isPassword ^= true;
+            break;
+          default:
+        }
+      },
+    );
   }
 }

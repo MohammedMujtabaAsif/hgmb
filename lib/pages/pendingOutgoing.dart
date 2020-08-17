@@ -2,41 +2,42 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:hgmb/utils/confirmButton.dart';
 import 'package:hgmb/utils/databaseHelper.dart';
 import 'package:hgmb/utils/refreshWithMessage.dart';
 import 'package:hgmb/utils/userListBox.dart';
 import 'package:hgmb/utils/userProfile.dart';
 
-class MatchedPage extends StatefulWidget {
+class PendingOutgoingPage extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
-  const MatchedPage({this.scaffoldKey});
-  State createState() => _MatchedPageState();
+  const PendingOutgoingPage({
+    this.scaffoldKey,
+  });
+  State createState() => _PendingOutgoingPageState();
 }
 
-class _MatchedPageState extends State<MatchedPage> {
+class _PendingOutgoingPageState extends State<PendingOutgoingPage> {
   StreamController<List<User>> _users;
   ScrollController _sc = new ScrollController();
   List<User> users = new List<User>();
   var db = new DatabaseHelper();
-  int _pageNum;
+  // int _pageNum;
   bool _messageExists = false;
   bool _isLoading = false;
   String _messageData = "";
-  Timer timer;
 
   @override
   void initState() {
     super.initState();
-    if (this.mounted) {
-      _pageNum = 1;
-      _users = StreamController<List<User>>();
-      _getUsers();
-      _sc.addListener(() {
-        if (_sc.position.pixels == _sc.position.maxScrollExtent) {
-          _getUsers();
-        }
-      });
-    }
+    // _pageNum = 1;
+    _users = StreamController<List<User>>();
+    _getUsers();
+
+    _sc.addListener(() {
+      if (_sc.position.pixels == _sc.position.maxScrollExtent) {
+        _getUsers();
+      }
+    });
   }
 
   _getUsers() async {
@@ -46,9 +47,10 @@ class _MatchedPageState extends State<MatchedPage> {
       });
     }
 
-    var res = await db.getData('acceptedRequests/?page=' + _pageNum.toString());
-    var body = json.decode(res.body);
+    await new Future.delayed(const Duration(seconds: 1));
 
+    var res = await db.getData('outgoingRequests');
+    var body = json.decode(res.body);
     if (!body['success']) {
       _messageExists = true;
       _messageData = body['message'];
@@ -66,10 +68,7 @@ class _MatchedPageState extends State<MatchedPage> {
       }
     } else {
       _messageExists = false;
-      if (body['data']['next_page_url'] != null) {
-        _pageNum++;
-      }
-      users += await db.getUsersAsList(body['data']['data']);
+      users += await db.getUsersAsList(body['data']);
 
       final tempUserList = users.map((e) => e.id).toSet();
       users.retainWhere((x) => tempUserList.remove(x.id));
@@ -86,8 +85,8 @@ class _MatchedPageState extends State<MatchedPage> {
     }
   }
 
-  _unmatch(data) async {
-    var res = await db.postData({'id': data}, 'unfriend');
+  _deleteMatchRequest(data) async {
+    var res = await db.postData({'id': data}, "deleteFriendRequest");
     var body = json.decode(res.body);
     _messageExists = false;
     _showMsg(body['message']);
@@ -112,7 +111,7 @@ class _MatchedPageState extends State<MatchedPage> {
   }
 
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return new StreamBuilder(
       stream: _users.stream,
       builder: (context, snapshot) {
         if (snapshot.hasData && !_messageExists) {
@@ -150,59 +149,32 @@ class _MatchedPageState extends State<MatchedPage> {
                             padding: EdgeInsets.fromLTRB(5.0, 10.0, 5.0, 0.0),
                             child: new UserListBox(
                               u: snapshot.data[index],
-                              buttonName: "Unmatch",
+                              buttonName: "Delete",
                               buttonMethod: () {
-                                // set up the buttons
-                                Widget continueButton = FlatButton(
-                                  child: Text(
-                                    "Unmatch",
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                  onPressed: () {
-                                    _unmatch(snapshot.data[index].id);
-
-                                    Navigator.of(context).pop();
-                                  },
-                                );
-                                Widget cancelButton = FlatButton(
-                                  child: Text(
-                                    "Cancel",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                );
-
-                                // set up the AlertDialog
-                                AlertDialog alert = AlertDialog(
-                                  title: Text(
-                                    "Unmatch " + snapshot.data[index].prefName,
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                  content: Text(
-                                    "Are you sure you want to unmatch with " +
-                                        snapshot.data[index].prefName +
-                                        "?",
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                  actions: [
-                                    cancelButton,
-                                    continueButton,
-                                  ],
-                                );
-                                // show the dialog
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext context) {
-                                    return alert;
+                                    return ConfirmButton(
+                                      buttonColor: Colors.red,
+                                      buttonMessage:
+                                          "Are you sure you want to delete your match request to " +
+                                              snapshot.data[index].prefName +
+                                              "?",
+                                      buttonMethod: () {
+                                        _deleteMatchRequest(
+                                            snapshot.data[index].id);
+                                        Navigator.of(context).pop();
+                                      },
+                                      buttonName: "Request Deletion",
+                                    );
                                   },
                                 ).then((value) {
-                                  if (this.mounted) {
-                                    setState(() {
-                                      _getUsers();
-                                    });
-                                  }
+                                  setState(() {
+                                    // if (this.mounted) {
+                                    users = [];
+                                    // _pageNum = 1;
+                                    _getUsers();
+                                  });
                                 });
                               },
                             ),
@@ -214,7 +186,7 @@ class _MatchedPageState extends State<MatchedPage> {
                   onRefresh: () async {
                     setState(() {
                       users = [];
-                      _pageNum = 1;
+                      // _pageNum = 1;
                       _getUsers();
                     });
                   },
@@ -228,7 +200,7 @@ class _MatchedPageState extends State<MatchedPage> {
             onRefresh: () async {
               setState(() {
                 users = [];
-                _pageNum = 1;
+                // _pageNum = 1;
                 _getUsers();
               });
             },

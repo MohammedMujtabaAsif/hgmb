@@ -1,48 +1,85 @@
 import 'package:flutter/material.dart';
 import 'package:hgmb/pages/matched.dart';
-import 'package:hgmb/pages/pending.dart';
+import 'package:hgmb/pages/pendingIncoming.dart';
+import 'package:hgmb/pages/pendingOutgoing.dart';
+import 'package:hgmb/utils/notificationIcon.dart';
 
 class MatchesPage extends StatefulWidget {
+  final bool pendingRequestNotificationExists;
+  final bool pendingMatchNotificationExists;
+  const MatchesPage(
+      {this.pendingRequestNotificationExists,
+      this.pendingMatchNotificationExists});
   @override
-  _MatchesPageState createState() => _MatchesPageState();
+  State createState() => _MatchesPageState();
 }
 
-class _MatchesPageState extends State<MatchesPage> with TickerProviderStateMixin
-// ,AutomaticKeepAliveClientMixin<MatchesPage>
+class _MatchesPageState extends State<MatchesPage>
+    with SingleTickerProviderStateMixin
 {
+  GlobalKey<ScaffoldState> scaffoldKey = new GlobalKey<ScaffoldState>();
   TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = new TabController(length: 2, vsync: this, initialIndex: 0);
+    _tabController = new TabController(length: 3, vsync: this, initialIndex: 0);
   }
-
-  // @override
-  // bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    // super.build(context);
-    return new Scaffold(
-      backgroundColor: Colors.white,
-      appBar: new AppBar(
-        // elevation: 1.0,
-        // backgroundColor: Colors.red,
-        flexibleSpace: new TabBar(
+    return new SafeArea(
+      top: false,
+      child: Scaffold(
+        key: scaffoldKey,
+        appBar: new AppBar(
+          flexibleSpace: new Padding(
+            padding: EdgeInsets.only(top: 0),
+            child: TabBar(
+              controller: _tabController,
+              tabs: [
+                new Tab(
+                  text: "Matched",
+                  icon: widget.pendingMatchNotificationExists
+                      ? NotificationIcon(
+                          notificationExists:
+                              widget.pendingMatchNotificationExists,
+                          iconData: Icons.group,
+                        )
+                      : Icon(Icons.group),
+                ),
+                new Tab(
+                  text: "Received",
+                  icon: widget.pendingRequestNotificationExists
+                      ? NotificationIcon(
+                          notificationExists:
+                              widget.pendingRequestNotificationExists,
+                          iconData: Icons.call_received,
+                        )
+                      : Icon(Icons.call_received),
+                ),
+                new Tab(
+                  text: "Sent",
+                  icon: const Icon(Icons.call_made),
+                ),
+              ],
+            ),
+          ),
+        ),
+        body: new TabBarView(
           controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Icons.group)),
-            Tab(icon: Icon(Icons.person_add)),
+          children: <Widget>[
+            MatchedPage(
+              scaffoldKey: scaffoldKey,
+            ),
+            PendingIncomingPage(
+              scaffoldKey: scaffoldKey,
+            ),
+            PendingOutgoingPage(
+              scaffoldKey: scaffoldKey,
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          MatchedPage(),
-          PendingPage(),
-        ],
       ),
     );
   }

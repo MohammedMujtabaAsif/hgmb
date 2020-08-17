@@ -1,4 +1,4 @@
-package com.example.hgmb
+package com.hgmb.MarriageFinder
 
 import androidx.annotation.NonNull;
 import io.flutter.embedding.android.FlutterActivity

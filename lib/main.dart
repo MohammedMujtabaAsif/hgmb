@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 //Pages
 import 'package:hgmb/pages/login.dart';
-import 'package:hgmb/pages/landing.dart';
+import 'package:hgmb/pages/middleware.dart';
 
 //Services
 import 'package:flutter/services.dart';
 import 'package:hgmb/utils/routeGenerator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// void main() => runApp(new MaterialApp(home: new LandingPage()));
 
 void main() => runApp(MyApp());
 
@@ -17,26 +17,36 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
     return MaterialApp(
-      title: 'HGMB',
-      debugShowCheckedModeBanner: false,
-      onGenerateRoute: RouteGenerator.generateRoute,
-      home: CheckAuth(),
-    );
+        title: 'Hall Green Marriage Bureau App',
+        debugShowCheckedModeBanner: false,
+        onGenerateRoute: RouteGenerator.generateRoute,
+        home: CheckAuth(),
+        localizationsDelegates: [GlobalMaterialLocalizations.delegate],
+        supportedLocales: [const Locale('en')]);
   }
 }
 
 class CheckAuth extends StatefulWidget {
   @override
-  _CheckAuthState createState() => _CheckAuthState();
+  State createState() => _CheckAuthState();
 }
 
 class _CheckAuthState extends State<CheckAuth> {
   bool isAuth = false;
+
   @override
   void initState() {
-    _checkIfLoggedIn();
-    super.initState();
+    if (this.mounted) {
+      _checkIfLoggedIn();
+      super.initState();
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   void _checkIfLoggedIn() async {
@@ -53,12 +63,10 @@ class _CheckAuthState extends State<CheckAuth> {
   Widget build(BuildContext context) {
     Widget child;
     if (isAuth) {
-      child = LandingPage();
+      child = new MiddlewarePage();
     } else {
-      child = LoginPage();
+      child = new LoginPage();
     }
-    return Scaffold(
-      body: child,
-    );
+    return child;
   }
 }

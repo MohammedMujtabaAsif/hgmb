@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hgmb/pages/call.dart';
 import 'package:hgmb/pages/landing.dart';
 import 'package:hgmb/pages/login.dart';
 import 'package:hgmb/pages/matched.dart';
 import 'package:hgmb/pages/register.dart';
+import 'package:hgmb/pages/middleware.dart';
+import 'package:hgmb/pages/resetPassword.dart';
+import 'package:hgmb/pages/update.dart';
 import 'package:hgmb/pages/userProfilePublic.dart';
-import 'package:hgmb/utils/userProfile.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -16,27 +17,25 @@ class RouteGenerator {
         return MaterialPageRoute(builder: (_) => LoginPage());
       case '/register':
         return MaterialPageRoute(builder: (_) => RegisterPage());
+      case '/resetPassword':
+        return MaterialPageRoute(builder: (_) => ResetPasswordPage());
+      case '/middleware':
+        return MaterialPageRoute(builder: (_) => MiddlewarePage());
       case '/landing':
         return MaterialPageRoute(builder: (_) => LandingPage());
       case '/userProfilePublic':
-        // Validation of correct data type
-        final User user = settings.arguments;
         return MaterialPageRoute(
-          builder: (_) => UserProfilePublic(
-            id: user.id.toString(),
-            prefName: user.prefName,
-            city: user.city,
-            maritalStatus: user.maritalStatus,
+          builder: (_) => UserProfilePublicPage(
+            u: settings.arguments,
           ),
         );
-
-      case '/call':
-        return MaterialPageRoute(builder: (_) => CallPage());
       case '/matched':
         return MaterialPageRoute(builder: (_) => MatchedPage());
+      case '/update':
+        return MaterialPageRoute(builder: (_) => UpdatePage());
 
       default:
-        // If there is no such named route in the switch statement, e.g. /third
+        // If there is no such named route in the switch statement
         return _errorRoute();
     }
   }

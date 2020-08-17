@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:hgmb/utils/customCheckboxList.dart';
+import 'package:hgmb/utils/customCard.dart';
+import 'package:hgmb/utils/customCheckbox.dart';
 import 'package:hgmb/utils/databaseHelper.dart';
+import 'package:hgmb/utils/formFields.dart';
 import 'package:hgmb/utils/userProfile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:validators/validators.dart' as validator;
-// import 'package:http/http.dart' as http;
 import 'dart:convert';
-// import 'package:intl/intl.dart';
-// import '../utils/calcAge.dart';
-// import 'package:datetime_picker_formfield/datetime_picker_formfield.dart';
-// import 'package:flutter_cupertino_date_picker/flutter_cupertino_date_picker.dart';
-// import 'dart:math';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -18,244 +17,476 @@ class RegisterPage extends StatefulWidget {
 }
 
 class RegisterPageState extends State<RegisterPage> {
-  // TextEditingController _textFieldController = TextEditingController();
-  bool _isLoading = false;
-  bool _isPassword = true;
   final _formKey = GlobalKey<FormState>();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _scrollController = ScrollController();
 
-  User user = User();
+  TextEditingController _passwordTextController = new TextEditingController();
+  TextEditingController _dateTextController = new TextEditingController();
 
-  int day;
-  int month;
-  int year;
+  bool _isLoading = false;
+  bool _isPassword = true;
+  User user;
 
-  // String _fistName;
-  // String _surname;
-  // String _prefferedName;
-  // String _emailAddress;
-  // String _password;
-  // String _city;
-  // int _phoneNumber;
-  // String _maritalStatus;
-  // DateTime _dob;
-  // String gender;
-  // String _bio;
+  void initState() {
+    super.initState();
+    user = new User();
+    user.prefMinAge = 100;
+    user.prefMaxAge = 100;
+  }
 
-  // int _noOfChildren = 0;
-  // String _linkToPhoto = "No Photo";
+  bool prefFemale = false;
+  bool prefMale = false;
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Form(key: _formKey);
-  // }
+  bool prefBirmingham = false;
+  bool prefLondon = false;
+  bool prefManchester = false;
+
+  bool prefSingle = false;
+  bool prefDivorced = false;
+  bool prefWidowed = false;
 
   @override
   Widget build(BuildContext context) {
-    final _mediaWidth = MediaQuery.of(context).size.width;
     return new Scaffold(
-        key: _scaffoldKey,
-        appBar: AppBar(
-          title: Text("Sign Up"),
-        ),
-        body: new InkWell(
-            child: new Form(
-                key: _formKey,
-                child: ListView(children: <Widget>[
-                  Column(
-                    children: <Widget>[
-                      Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      key: _scaffoldKey,
+      appBar: AppBar(
+        title: Text("Register"),
+      ),
+      body: GestureDetector(
+        onTap: () {
+          focusCheck(context);
+        },
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: EdgeInsets.all(5),
+            child: ListView(
+              controller: _scrollController,
+              children: <Widget>[
+                Column(
+                  children: <Widget>[
+                    Card(
+                      child: Column(
+                        children: <Widget>[
+                          CustomCard(
+                            title: "Your Details",
+                            isTitle: true,
+                            titleSize: 18,
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Flexible(
+                                flex: 1,
+                                child: Container(
+                                  alignment: Alignment.topCenter,
+                                  child: MyTextFormField(
+                                    textCapitalisation: true,
+                                    hintText: "First Name(s)",
+                                    validator: (String value) {
+                                      if (value.isEmpty) {
+                                        return 'Please Enter your First Name(s)';
+                                      }
+                                      return null;
+                                    },
+                                    onSaved: (String value) =>
+                                        user.firstNames = value,
+                                  ),
+                                ),
+                              ),
+                              Flexible(
+                                flex: 1,
+                                child: Container(
+                                  alignment: Alignment.topCenter,
+                                  child: MyTextFormField(
+                                    textCapitalisation: true,
+                                    hintText: "Surname",
+                                    validator: (String value) {
+                                      if (value.isEmpty) {
+                                        return 'Please Enter your Surname';
+                                      }
+                                      return null;
+                                    },
+                                    onSaved: (String value) =>
+                                        user.surname = value,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          MyTextFormField(
+                            textCapitalisation: true,
+                            hintText: "Displayed Name",
+                            validator: (String value) {
+                              if (value.isEmpty) {
+                                return 'Please Enter your Display Name';
+                              }
+                              return null;
+                            },
+                            onSaved: (String value) => user.prefName = value,
+                          ),
+                          MyTextFormField(
+                            hintText: "Email",
+                            isEmail: true,
+                            validator: (String value) {
+                              if (!validator.isEmail(value)) {
+                                return "Please Enter a valid Email Address";
+                              }
+                              return null;
+                            },
+                            onSaved: (String value) => user.email = value,
+                          ),
+                          MyTextFormField(
+                            hintText: "Password",
+                            autocorrect: false,
+                            isPassword: _isPassword,
+                            suffixIcon: _isPassword
+                                ? IconButton(
+                                    onPressed: () => toggle("_isPassword"),
+                                    icon: Icon(Icons.visibility_off),
+                                  )
+                                : IconButton(
+                                    onPressed: () => toggle("_isPassword"),
+                                    icon: Icon(Icons.visibility),
+                                  ),
+                            validator: (String value) {
+                              if (value.length < 8) {
+                                return "Password must be a minimum of 8 characters";
+                              }
+                              _formKey.currentState.save();
+                              return null;
+                            },
+                            onSaved: (String value) => user.password = value,
+                          ),
+                          MyTextFormField(
+                            controller: _passwordTextController,
+                            hintText: "Confirm Password",
+                            isPassword: true,
+                            autocorrect: false,
+                            validator: (String value) {
+                              if (value.length < 8) {
+                                return "Please confirm your password";
+                              } else if (user.password != null &&
+                                  value != user.password) {
+                                _passwordTextController.text = "";
+                              }
+                              return null;
+                            },
+                          ),
+                          MyTextFormField(
+                            hintText: "Phone Number",
+                            validator: (String value) {
+                              RegExp phoneNumberPattern =
+                                  new RegExp(r'^(?:[+0])?[1|7]{1}[0-9]{9}$');
+                              if (!phoneNumberPattern.hasMatch(value)) {
+                                return "Enter a valid phone number";
+                              }
+                              return null;
+                            },
+                            onSaved: (String value) => user.phoneNumber = value,
+                          ),
+                          MyTextFormField(
+                            hintText: "Number of Children",
+                            isNumber: true,
+                            validator: (String value) {
+                              if (value.isEmpty)
+                                return "Please Enter How Many Children You Have";
+                              if (int.parse(value) < 0)
+                                return "Cannot Have Negative Number of Children";
+                              if (int.parse(value) > 15)
+                                return "Number Too Large";
+                              return null;
+                            },
+                            onSaved: (String value) =>
+                                user.numOfChildren = int.parse(value),
+                          ),
+                          MyTextFormField(
+                            hintText: "Date of Birth",
+                            controller: _dateTextController,
+                            readOnly: true,
+                            isNumber: true,
+                            onTap: () => _selectDate(context),
+                          ),
+                          MyTextFormField(
+                            textCapitalisation: true,
+                            isBio: true,
+                            maxLength: 1000,
+                            hintText: "Biography",
+                            autocorrect: true,
+                            validator: (String value) {
+                              if (value.length == 0)
+                                return "Please Enter A Biography";
+                              if (value.length < 10)
+                                return "Biography Too Short";
+                              return null;
+                            },
+                            onSaved: (String value) => user.bio = value,
+                          ),
+                          MyDropDownFormField(
+                            hintText: "Gender",
+                            list: <String>[
+                              "Female",
+                              "Male",
+                            ],
+                            onSaved: (String value) {
+                              if (value == "Female")
+                                user.gender = Attribute(id: 1, name: "Female");
+                              else if (value == "Male")
+                                user.gender = Attribute(id: 2, name: "Male");
+                            },
+                          ),
+                          MyDropDownFormField(
+                            hintText: "City",
+                            list: <String>[
+                              "Birmingham",
+                              "London",
+                              "Manchester",
+                            ],
+                            onSaved: (String value) {
+                              if (value == "Birmingham")
+                                user.city =
+                                    Attribute(id: 1, name: "Birmingham");
+                              else if (value == "London")
+                                user.city = Attribute(id: 2, name: "London");
+                              else if (value == "Manchester")
+                                user.city =
+                                    Attribute(id: 3, name: "Manchester");
+                            },
+                          ),
+                          MyDropDownFormField(
+                            hintText: "Marital Status",
+                            list: <String>[
+                              "Single",
+                              "Divorced",
+                              "Widowed",
+                            ],
+                            onSaved: (String value) {
+                              if (value == "Single")
+                                user.maritalStatus =
+                                    Attribute(id: 1, name: "Single");
+                              else if (value == "Divorced")
+                                user.maritalStatus =
+                                    Attribute(id: 2, name: "Divorced");
+                              else if (value == "Widowed")
+                                user.maritalStatus =
+                                    Attribute(id: 3, name: "Widowed");
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 5),
+                      child: Card(
+                        child: Column(
                           children: <Widget>[
                             Container(
-                              alignment: Alignment.topCenter,
-                              width: _mediaWidth / 2,
-                              child: MyTextFormField(
-                                hintText: "First Name(s)",
-                                validator: (String value) {
-                                  if (value.isEmpty) {
-                                    return 'Enter Your First Name(s)';
-                                  }
-                                  return null;
-                                },
-                                onSaved: (String value) {
-                                  user.firstNames = value;
-                                },
+                              child: CustomCard(
+                                title: "Partner Preferences",
+                                isTitle: true,
                               ),
                             ),
                             Container(
-                              alignment: Alignment.topCenter,
-                              width: _mediaWidth / 2,
-                              child: MyTextFormField(
-                                hintText: "Last Name",
-                                validator: (String value) {
-                                  if (value.isEmpty) {
-                                    return 'Enter Your Last Name';
-                                  }
-                                  return null;
-                                },
-                                onSaved: (String value) {
-                                  user.surname = value;
-                                },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: <Widget>[
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Flexible(
+                                        flex: 3,
+                                        child: Container(
+                                          child: MyTextFormField(
+                                            isNumber: true,
+                                            hintText: "Min Age",
+                                            validator: (String value) {
+                                              if (value.isEmpty)
+                                                return 'Enter Min Age';
+
+                                              if (int.parse(value) < 18)
+                                                return "Min Age Cannot Be Less Than 18";
+
+                                              if (int.parse(value) >
+                                                  user.prefMaxAge)
+                                                return "Min Age Must Be Less Than Max Age";
+
+                                              return null;
+                                            },
+                                            onSaved: (String value) => user
+                                                .prefMinAge = int.parse(value),
+                                          ),
+                                        ),
+                                      ),
+                                      Flexible(
+                                        flex: 1,
+                                        child: CustomCard(
+                                          title: "_",
+                                          titleSize: 18,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        flex: 3,
+                                        child: Container(
+                                          child: MyTextFormField(
+                                            isNumber: true,
+                                            hintText: "Max Age",
+                                            validator: (String value) {
+                                              if (value.isEmpty)
+                                                return 'Enter Max Age';
+
+                                              if (int.parse(value) > 70)
+                                                return "Max Age Cannot Be More Than 70";
+
+                                              if (int.parse(value) <
+                                                  user.prefMinAge)
+                                                return "Max Age Must Be Greater Than Min Age";
+
+                                              return null;
+                                            },
+                                            onSaved: (String value) => user
+                                                .prefMaxAge = int.parse(value),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            )
-                          ]),
-                      MyTextFormField(
-                        hintText: "Displayed Name",
-                        onSaved: (String value) {
-                          user.prefName = value;
-                        },
-                      ),
-                      MyTextFormField(
-                        hintText: "Email",
-                        isEmail: true,
-                        validator: (String value) {
-                          if (!validator.isEmail(value)) {
-                            return "Enter a valid Email address";
-                          }
-                          return null;
-                        },
-                        onSaved: (String value) {
-                          user.email = value;
-                        },
-                      ),
-                      MyTextFormField(
-                        hintText: "Password",
-                        autocorrect: false,
-                        isPassword: _isPassword,
-                        validator: (String value) {
-                          if (value.length < 8) {
-                            return "Password must be a minimum of 8 characters";
-                          }
-                          _formKey.currentState.save();
-                          return null;
-                        },
-                        onSaved: (String value) {
-                          user.password = value;
-                        },
-                      ),
-                      MyTextFormField(
-                        hintText: "Confirm Password",
-                        isPassword: _isPassword,
-                        autocorrect: false,
-                        validator: (String value) {
-                          if (user.password != null && value != user.password) {
-                            return "Passwords do not match";
-                          }
-                          return null;
-                        },
-                      ),
-                      MyTextFormField(
-                        hintText: "Phone Number",
-                        validator: (String value) {
-                          RegExp phoneNumberPattern =
-                              new RegExp(r'^(?:[+0])?[1|7]{1}[0-9]{9}$');
-                          if (!phoneNumberPattern.hasMatch(value)) {
-                            return "Enter a valid phone number";
-                          }
-                          return null;
-                        },
-                        onSaved: (String value) {
-                          user.phoneNumber = value;
-                        },
-                      ),
-                      MyDropDownFormField(
-                        hintText: "Your City",
-                        list: <String>[
-                          "Manchester",
-                          "Birmingham",
-                          "London",
-                        ],
-                        onSaved: (String value) {
-                          user.city = value;
-                        },
-                      ),
-                      MyDropDownFormField(
-                        hintText: "Marital Status",
-                        list: <String>[
-                          "Single",
-                          "Divorced",
-                          "Separated",
-                          "Widowed",
-                        ],
-                        onSaved: (String value) {
-                          user.maritalStatus = value;
-                        },
-                      ),
-/*                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Container(
-                              alignment: Alignment.center,
-                              width: _mediaWidth / 3,
-                              child: new MyTextFormField(
-                                hintText: "DD",
-                                autocorrect: false,
-                                isDate: true,
+                            ),
+                            Container(
+                              child: MyTextFormField(
+                                isNumber: true,
+                                hintText: "Maximum Number of Children",
                                 validator: (String value) {
-                                  RegExp datePattern =
-                                      new RegExp(r'^(?:[+0])?[1-31]{1}$');
-                                  if (datePattern.hasMatch(value)) {
-                                    return "Date too large";
-                                  }
+                                  if (value.isEmpty)
+                                    return "Please Enter Max Number of Children";
+                                  if (int.parse(value) < 0)
+                                    return "Cannot Have Negative Number of Children";
+                                  if (int.parse(value) > 15)
+                                    return "Number Too Large";
                                   return null;
                                 },
-                              )),
-                          Container(
-                            alignment: Alignment.center,
-                            width: _mediaWidth / 3,
-                            child: new MyTextFormField(
-                              hintText: "MM",
-                              autocorrect: false,
-                              isDate: true,
-                              validator: (String value) {
-                                RegExp datePattern =
-                                    new RegExp(r'^(?:[+0])?[1-31]{1}$');
-                                if (datePattern.hasMatch(value)) {
-                                  return "Month too large";
-                                }
-                                return null;
-                              },
+                                onSaved: (String value) => user
+                                    .prefMaxNumOfChildren = int.parse(value),
+                              ),
                             ),
-                          ),
-                          Container(
-                            alignment: Alignment.center,
-                            width: _mediaWidth / 3,
-                            child: new MyTextFormField(
-                              hintText: "YYYY",
-                              autocorrect: false,
-                              isDate: true,
-                              validator: (String value) {
-                                RegExp datePattern =
-                                    new RegExp(r'^(?:[+0])?[1-31]{1}$');
-                                if (datePattern.hasMatch(value)) {
-                                  return "Year too large";
-                                }
-                                return null;
-                              },
+                            CustomCheckboxList(
+                              controller: _scrollController,
+                              title: "Genders",
+                              checkboxList: [
+                                CustomCheckbox(
+                                  title: "Female",
+                                  value: prefFemale,
+                                  onChanged: (_) => setState(() {
+                                    focusCheck(this.context);
+                                    prefFemale ^= true;
+                                  }),
+                                ),
+                                CustomCheckbox(
+                                  title: "Male",
+                                  value: prefMale,
+                                  onChanged: (value) => setState(() {
+                                    focusCheck(this.context);
+                                    prefMale ^= true;
+                                  }),
+                                ),
+                              ],
                             ),
-                          )
-                        ],
-                      ), */
-                      RaisedButton(
-                          color: Colors.blueAccent,
-                          child: Text(
-                            _isLoading ? 'Processing...' : 'Register',
-                            style: TextStyle(
-                              color: Colors.white,
+                            CustomCheckboxList(
+                              controller: _scrollController,
+                              title: "Cities",
+                              checkboxList: [
+                                CustomCheckbox(
+                                  title: "Birmingham",
+                                  value: prefBirmingham,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefBirmingham")
+                                  },
+                                ),
+                                CustomCheckbox(
+                                  title: "London",
+                                  value: prefLondon,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefLondon")
+                                  },
+                                ),
+                                CustomCheckbox(
+                                  title: "Manchester",
+                                  value: prefManchester,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefManchester")
+                                  },
+                                ),
+                              ],
                             ),
-                          ),
-                          onPressed: () {
-                            if (_formKey.currentState.validate()) {
-                              _formKey.currentState.save();
-                              _register();
-                            }
-                          })
-                    ],
-                  )
-                ]))));
+                            CustomCheckboxList(
+                              controller: _scrollController,
+                              title: "Marital Statuses",
+                              checkboxList: [
+                                CustomCheckbox(
+                                  title: "Single",
+                                  value: prefSingle,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefSingle")
+                                  },
+                                ),
+                                CustomCheckbox(
+                                  title: "Divorced",
+                                  value: prefDivorced,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefDivorced")
+                                  },
+                                ),
+                                CustomCheckbox(
+                                  title: "Widowed",
+                                  value: prefWidowed,
+                                  onChanged: (value) => {
+                                    focusCheck(this.context),
+                                    toggle("prefWidowed")
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    RaisedButton(
+                      color: Colors.blueAccent,
+                      child: Text(
+                        _isLoading ? 'Processing...' : 'Register',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                      onPressed: () {
+                        if (_formKey.currentState.validate()) {
+                          _formKey.currentState.save();
+                          _register();
+                        } else {
+                          _showMsg("Please Fix The Errors Before Registering");
+                        }
+                      },
+                    )
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
+  // show message in current scaffold
   _showMsg(msg) {
     final snackBar = SnackBar(
       content: Text(msg),
@@ -267,323 +498,137 @@ class RegisterPageState extends State<RegisterPage> {
     _scaffoldKey.currentState.showSnackBar(snackBar);
   }
 
-  void _register() async {
-    setState(() {
-      _isLoading = true;
-    });
-    var data = {
-      "firstNames": user.firstNames,
-      "surname": user.surname,
-      "prefName": user.prefName,
-      "email": user.email,
-      "password": user.password,
-      "password_confirmation": user.password,
-      "phoneNumber": user.phoneNumber,
-      "city": user.city,
-      "maritalStatus": user.maritalStatus
-    };
+  // switch current focus of the widget
+  focusCheck(context) {
+    FocusScopeNode currentFocus = FocusScope.of(context);
 
-    var res = await DatabaseHelper().authData(data, '/signup');
+    if (!currentFocus.hasPrimaryFocus) {
+      currentFocus.unfocus();
+    }
+  }
+
+  // POST form data to server
+  void _register() async {
+    //set the button to loading
+    toggle("_isLoading");
+    //set the user's preferences from the form
+    setPrefs();
+
+    // convert the user to JSON
+    var data = user.toJson();
+
+    // await a response from server about POST data
+    var res = await DatabaseHelper().authData(data, 'register');
+    // decode the body of the response
     var body = json.decode(res.body);
-    // print(body);
+
+    // if the success key in body is true
     if (body['success']) {
+      // store the user and their token. Then move them to the middleware route to await approval
       SharedPreferences localStorage = await SharedPreferences.getInstance();
       localStorage.setString('token', json.encode(body['token']));
       localStorage.setString('user', json.encode(body['user']));
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/landing', (Route<dynamic> route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+          '/middleware', (Route<dynamic> route) => false);
     } else {
+      // if the message is unsuccessful. Show the errors in the scaffold
       Map<String, dynamic> _errors = Map<String, dynamic>.from(body['message']);
       StringBuffer sb = new StringBuffer();
       sb.writeAll(_errors.values, "\n");
       _showMsg(sb.toString());
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    // set the button to normal
+    toggle("_isLoading");
   }
 
-  void toggle() {
-    setState(() {
-      _isPassword = !_isPassword;
-    });
+  // use the values from the checkbox booleans to setup the user's preferences
+  void setPrefs() {
+    // Add prefGenders to User
+    List<PrefGender> prefGenders = new List<PrefGender>();
+    if (prefFemale) prefGenders.add(PrefGender(genderId: 1, name: "Female"));
+    if (prefMale) prefGenders.add(PrefGender(genderId: 2, name: "Male"));
+
+    // Add PrefCities to User
+    List<PrefCity> prefCities = new List<PrefCity>();
+    if (prefBirmingham) prefCities.add(PrefCity(cityId: 1, name: "Birmingham"));
+    if (prefLondon) prefCities.add(PrefCity(cityId: 2, name: "London"));
+    if (prefManchester) prefCities.add(PrefCity(cityId: 3, name: "Manchester"));
+
+    // Add PrefMaritalStatuses to User
+    List<PrefMaritalStatus> prefMaritalStatuses = new List<PrefMaritalStatus>();
+    if (prefSingle)
+      prefMaritalStatuses
+          .add(PrefMaritalStatus(maritalStatusId: 1, name: "Single"));
+    if (prefDivorced)
+      prefMaritalStatuses
+          .add(PrefMaritalStatus(maritalStatusId: 2, name: "Divorced"));
+    if (prefWidowed)
+      prefMaritalStatuses
+          .add(PrefMaritalStatus(maritalStatusId: 3, name: "Widowed"));
+
+    user.prefGenders = prefGenders;
+    user.prefCities = prefCities;
+    user.prefMaritalStatuses = prefMaritalStatuses;
   }
-}
 
-class MyTextFormField extends StatelessWidget {
-  final String hintText;
-  final Function validator;
-  final Function onSaved;
-  final bool autocorrect;
-  final bool isPassword;
-  final bool isEmail;
-  final bool isDate;
+  // show the DatePicker with dates from 18-70 years ago
+  Future<void> _selectDate(BuildContext context) async {
+    DateTime eighteenYearsAgo =
+        DateTime.now().subtract(new Duration(days: 6575));
+    DateTime seventyYearsAgo =
+        DateTime.now().subtract(new Duration(days: 25568));
 
-  MyTextFormField({
-    this.hintText,
-    this.validator,
-    this.onSaved,
-    this.autocorrect = true,
-    this.isPassword = false,
-    this.isEmail = false,
-    this.isDate = false,
-  });
+    final DateTime picked = await showDatePicker(
+        context: context,
+        initialDate: eighteenYearsAgo,
+        firstDate: seventyYearsAgo,
+        lastDate: eighteenYearsAgo);
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(5.0),
-      child: TextFormField(
-        decoration: InputDecoration(
-          hintText: hintText,
-          contentPadding: EdgeInsets.all(15),
-          border: InputBorder.none,
-          filled: true,
-        ),
-        obscureText: isPassword ? true : false,
-        autocorrect: autocorrect,
-        validator: validator,
-        onSaved: onSaved,
-        keyboardType: isEmail == true
-            ? TextInputType.emailAddress
-            : isDate == true ? TextInputType.number : TextInputType.text,
-      ),
+    // if a value is picked
+    if (picked != null)
+      setState(
+        () {
+          // save the date to the user as the correct format for the server
+          user.dob = Jiffy(picked).format('yyyy/MM/dd');
+          // display the date in a user friendly format  (Day Number / Month Name / Year)
+          _dateTextController.text = Jiffy(picked).format('dd MMM yyyy');
+        },
+      );
+  }
+
+  void toggle(boolVal) {
+    //toggle all the potential booleans
+    setState(
+      () {
+        switch (boolVal) {
+          case "_isLoading":
+            _isLoading ^= true;
+            break;
+          case "_isPassword":
+            _isPassword ^= true;
+            break;
+          case "prefBirmingham":
+            prefBirmingham ^= true;
+            break;
+          case "prefLondon":
+            prefLondon ^= true;
+            break;
+          case "prefManchester":
+            prefManchester ^= true;
+            break;
+          case "prefSingle":
+            prefSingle ^= true;
+            break;
+          case "prefDivorced":
+            prefDivorced ^= true;
+            break;
+          case "prefWidowed":
+            prefWidowed ^= true;
+            break;
+          default:
+        }
+      },
     );
   }
 }
-
-class MyDropDownFormField extends StatefulWidget {
-  final String hintText;
-  final List list;
-  final Function onSaved;
-
-  const MyDropDownFormField({
-    Key key,
-    this.onSaved,
-    this.hintText,
-    this.list,
-  }) : super(key: key);
-
-  @override
-  MyDropDownFormFieldState createState() => MyDropDownFormFieldState();
-}
-
-class MyDropDownFormFieldState extends State<MyDropDownFormField> {
-  String dropdownValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-        padding: EdgeInsets.all(5.0),
-        child: DropdownButtonFormField(
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            contentPadding: EdgeInsets.all(15),
-            border: InputBorder.none,
-            filled: true,
-          ),
-          value: dropdownValue,
-          items: widget.list.map((dropdownValue) {
-            return DropdownMenuItem<String>(
-              value: dropdownValue,
-              child: Text(dropdownValue),
-            );
-          }).toList(),
-          onChanged: (String newValue) {
-            setState(() {
-              dropdownValue = newValue;
-            });
-          },
-          onSaved: widget.onSaved,
-        ));
-  }
-}
-
-// @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//         appBar: AppBar(
-//           title: Text("Sign Up"),
-//         ),
-//         body: new InkWell(
-//           child: new Form(
-//               key: _formKey,
-//               child: ListView(primary: false, children: <Widget>[
-//                 new TextFormField(
-//                   onChanged: (fullName) => _fullName = fullName,
-//                   decoration: InputDecoration(
-//                     contentPadding: const EdgeInsets.all(5.0),
-//                     labelText: "Full Name",
-//                     labelStyle: TextStyle(fontWeight: FontWeight.bold),
-//                     // helperText: "Please Enter Your Full Name"
-//                   ),
-//                 ),
-//                 new TextFormField(
-//                     onChanged: (prefName) => _prefferedName = prefName,
-//                     decoration: InputDecoration(
-//                       contentPadding: const EdgeInsets.all(5.0),
-//                       labelText: "Display Name",
-//                       labelStyle: TextStyle(fontWeight: FontWeight.bold),
-//                       // helperText: "Please The Name To Display On Your Profile",
-//                     )),
-//                 new TextFormField(
-//                   // controller: _textFieldController,
-//                   onChanged: (email) => _emailAddress = email,
-//                   decoration: new InputDecoration(
-//                     contentPadding: const EdgeInsets.all(5.0),
-//                     labelText: 'E-mail Address',
-//                     labelStyle: TextStyle(fontWeight: FontWeight.bold),
-//                     // helperText: "Please Enter Your Email Address",
-//                   ),
-//                 ),
-//                 new TextFormField(
-//                     // controller: _textFieldController,
-//                     obscureText: _obscureText,
-//                     onChanged: (value) => _password = value,
-//                     autocorrect: false,
-//                     decoration: new InputDecoration(
-//                       contentPadding: const EdgeInsets.all(5.0),
-//                       labelText: 'Password',
-//                       labelStyle: TextStyle(fontWeight: FontWeight.bold),
-//                       // helperText: "Please Enter Your Password",
-//                       suffixIcon: IconButton(
-//                         icon: Icon(
-//                             _obscureText
-//                                 ? Icons.visibility_off
-//                                 : Icons.visibility,
-//                             color: Theme.of(context).primaryColorDark),
-//                         onPressed: () {
-//                           setState(() {
-//                             _toggle();
-//                           });
-//                         },
-//                       ),
-//                     ),
-//                     validator: (String value) {
-//                       if (value.trim().isEmpty) {
-//                         print("no input");
-//                         return "Password is required";
-//                       }
-//                       if (value.trim().length <= 8) {
-//                         return "Password must be at least 8 characters";
-//                       }
-//                     }),
-//                 new TextFormField(
-//                   decoration: new InputDecoration(
-//                       contentPadding: const EdgeInsets.all(5.0),
-//                       labelText: "City",
-//                       labelStyle: TextStyle(fontWeight: FontWeight.bold)),
-//                 ),
-//                 new TextFormField(
-//                   decoration: new InputDecoration(
-//                       contentPadding: const EdgeInsets.all(5.0),
-//                       labelText: "Phone Number",
-//                       labelStyle: TextStyle(fontWeight: FontWeight.bold)),
-//                 ),
-//                 new DropdownButtonFormField(
-//                     items: <String>[
-//                       "Single",
-//                       "Divorced",
-//                       "Separated",
-//                       "Widowed",
-//                     ].map<DropdownMenuItem<String>>((String value) {
-//                       return DropdownMenuItem<String>(
-//                         value: value,
-//                         child: Text(value),
-//                       );
-//                     }).toList(),
-//                     onChanged: (String newValue) {
-//                       setState(() {
-//                         dropdownValue = newValue;
-//                       });
-//                     }),
-//                 new Padding(padding: const EdgeInsets.all(5.0)),
-//                 new Center(
-//                     child: new Container(
-//                         alignment: Alignment.center,
-//                         child: new Column(children: <Widget>[
-//                           new DropdownButtonFormField(
-//                             value: dropdownValue == ""
-//                                 ? "Select Marital Status"
-//                                 : dropdownValue,
-//                             items: <String>[
-//                               "Select Marital Status",
-//                               "Single",
-//                               "Divorced",
-//                               "Separated",
-//                               "Widowed",
-//                             ].map<DropdownMenuItem<String>>((String value) {
-//                               return DropdownMenuItem<String>(
-//                                 value: value,
-//                                 child: Text(value),
-//                               );
-//                             }).toList(),
-//                             onChanged: (String newValue) {
-//                               setState(() {
-//                                 dropdownValue = newValue;
-//                               });
-//                             },
-//                           ),
-//                           new DropdownButtonFormField(
-//                               items: <String>[
-//                                 "Single",
-//                                 "Divorced",
-//                                 "Separated",
-//                                 "Widowed",
-//                               ].map<DropdownMenuItem<String>>((String value) {
-//                                 return DropdownMenuItem<String>(
-//                                   value: value,
-//                                   child: Text(value),
-//                                 );
-//                               }).toList(),
-//                               onChanged: (String newValue) {
-//                                 setState(() {
-//                                   dropdownValue = newValue;
-//                                 });
-//                               }),
-//                         ]))),
-//                 // new TextFormField(
-//                 //dateselectorbutton
-//                 // new FloatingActionButton(
-//                 //   child: new Icon(Icons.date_range),
-//                 //   onPressed: () => showDatePicker(
-//                 //     context: context,
-//                 //     initialDate: _dob == null
-//                 //         ? new DateTime.now()
-//                 //             .subtract(new Duration(days: 365 * 18))
-//                 //         : _dob,
-//                 //     firstDate: new DateTime.now()
-//                 //         .subtract(new Duration(days: 365 * 100)),
-//                 //     lastDate: new DateTime.now()
-//                 //         .subtract(new Duration(days: 365 * 18)),
-//                 //   ),
-//                 // ),
-//                 new Padding(padding: const EdgeInsets.all(5.0)),
-//                 RaisedButton(
-//                   child: Text('Save'),
-//                   onPressed: () => _formKey.currentState.save(),
-//                 ),
-//                 RaisedButton(
-//                   child: Text('Reset'),
-//                   onPressed: () => _formKey.currentState.reset(),
-//                 ),
-//                 RaisedButton(
-//                   child: Text('Validate'),
-//                   onPressed: () => _formKey.currentState.validate(),
-//                 ),
-//                 RaisedButton(
-//                   onPressed: () {
-//                     showDialog(
-//                       context: context,
-//                       child: new AlertDialog(
-//                         title: new Text("Email Address: " + _emailAddress),
-//                         content: new Text("Password: " + _password),
-//                       ),
-//                     );
-//                   },
-//                   child: new Text('DONE'),
-//                 ),
-//               ])),
-//         ));
-//   }
